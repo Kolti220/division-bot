@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import json
 import os
+import threading
 
 from flask import Flask
 
@@ -11,7 +12,7 @@ app = Flask(__name__)
 def home():
     return "Hello, World!"
 
-if __name__ == '__main__':
+def run_flask():
     # Получаем порт из переменной окружения или используем 3000 по умолчанию
     port = int(os.environ.get('PORT', 3000))
     app.run(host='0.0.0.0', port=port)
@@ -166,6 +167,7 @@ if __name__ == "__main__":
        print("Ошибка: Токен Discord не установлен.")
    else:
        try:
+           threading.Thread(target=run_flask).start()  # Запускаем Flask в отдельном потоке
            bot.run(DISCORD_TOKEN)  
        except Exception as e:
            print(f"Ошибка при запуске бота: {e}")
