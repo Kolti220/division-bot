@@ -155,7 +155,6 @@ async def points(ctx: discord.ApplicationContext, user: discord.User):
 
 @bot.slash_command(name="clear", description="Удалить указанное количество сообщений в канале")
 async def clear(ctx: discord.ApplicationContext, amount: int):
-    
     if not has_allowed_role(ctx):
         await ctx.respond("У вас нет прав для выполнения этой команды.", ephemeral=True)
         return
@@ -164,10 +163,10 @@ async def clear(ctx: discord.ApplicationContext, amount: int):
         await ctx.respond("Укажите количество сообщений от 1 до 100.", ephemeral=True)
         return
 
-   # Удаляем сообщения в канале
-   deleted = await ctx.channel.purge(limit=amount + 1)  
+    # Удаляем сообщения в канале
+    deleted = await ctx.channel.purge(limit=amount + 1)  
     
-   await ctx.respond(f"Удалено {len(deleted)-1} сообщений.", ephemeral=True)  
+    await ctx.respond(f"Удалено {len(deleted)-1} сообщений.", ephemeral=True)  
 
 @bot.event
 async def on_disconnect():
