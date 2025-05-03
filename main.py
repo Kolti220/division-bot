@@ -22,7 +22,6 @@ DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 intents = discord.Intents.default()
 intents.message_content = True
 intents.messages = True
-intents.guilds = True  # Необходимо для работы с ролями
 
 # Создаем экземпляр бота
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -33,27 +32,23 @@ server_channel_ids = {}
 # Словарь для хранения очков пользователей
 user_points = {}
 
-# Словарь для хранения ролей пользователей
-user_roles = {}
-
 # Список ID ролей, которые могут использовать команды добавления и снятия очков и очистки сообщений
-allowed_role_ids = [1365244035807318027, 1365244014395392040, 1365243619656732736]
+allowed_role_ids = [1365244035807318027, 1365244014395392040, 1365243619656732736, 1366810345724969129, 1366810345724969128, 1366810345724969127]
 
 def has_allowed_role(ctx):
     return any(role.id in allowed_role_ids for role in ctx.author.roles)
 
 def load_data():
-    global user_points, server_channel_ids, user_roles
+    global user_points, server_channel_ids
     if os.path.exists('data.json'):
         with open('data.json', 'r') as f:
             data = json.load(f)
             user_points = data.get('user_points', {})
             server_channel_ids = data.get('server_channel_ids', {})
-            user_roles = data.get('user_roles', {})
 
 def save_data():
     with open('data.json', 'w') as f:
-        json.dump({'user_points': user_points, 'server_channel_ids': server_channel_ids, 'user_roles': user_roles}, f)
+        json.dump({'user_points': user_points, 'server_channel_ids': server_channel_ids}, f)
 
 @bot.event
 async def on_ready():
@@ -74,7 +69,7 @@ async def select_channel(ctx: discord.ApplicationContext, channel: discord.TextC
         save_data()
         await ctx.respond(f'Канал для отчетов установлен: {channel.mention}', ephemeral=True)
     else:
-        await ctx.respond("Этот канал уже добавлен.", ephemeral=True)
+        await ctx.respond("Этот канал уже установлен для отчетов.", ephemeral=True)
 
 @bot.slash_command(name="unselect_channel", description="Удалить канал из списка отчетов")
 async def unselect_channel(ctx: discord.ApplicationContext, channel: discord.TextChannel):
@@ -89,7 +84,7 @@ async def unselect_channel(ctx: discord.ApplicationContext, channel: discord.Tex
     else:
         await ctx.respond("Этот канал не найден в списке отчетов.", ephemeral=True)
 
-@bot.slash_command(name="add", description="Добавить очки пользователю")
+@bot.slash_command(name="add", description="Добавить очки военнослужащему")
 async def add(ctx: discord.ApplicationContext, user: discord.User, points: int, *, reason: str):
     global user_points
     
@@ -117,9 +112,9 @@ async def add(ctx: discord.ApplicationContext, user: discord.User, points: int, 
 
     save_data()  # Сохраняем данные после изменения очков пользователя
 
-    await ctx.respond("Очки успешно добавлены.", ephemeral=True)
+    await ctx.respond("Очки успешно выданы.", ephemeral=True)
 
-@bot.slash_command(name="take", description="Снять очки у пользователя")
+@bot.slash_command(name="take", description="Снять очки у военнослужащего")
 async def take(ctx: discord.ApplicationContext, user: discord.User, points: int, *, reason: str):
     global user_points
     
@@ -147,75 +142,32 @@ async def take(ctx: discord.ApplicationContext, user: discord.User, points: int,
 
     await ctx.respond("Очки успешно сняты.", ephemeral=True)
 
-@bot.slash_command(name="points", description="Количество очков у пользователя")
+@bot.slash_command(name="points", description="Количество очков у военнослужащего")
 async def points(ctx: discord.ApplicationContext, user: discord.User):
     
-   balance = user_points.get(user.id, 0)
+    balance = user_points.get(user.id, 0)
 
-   embed = discord.Embed(title="Отчёт о наличии очков", color=0x00ff00)
-   embed.add_field(name="Военнослужащий", value=user.mention)
-   embed.add_field(name="Имеет", value=f"{balance} очков.")  
+    embed = discord.Embed(title="Отчёт о наличии очков", color=0x00ff00)
+    embed.add_field(name="Военнослужащий", value=user.mention)
+    embed.add_field(name="Имеет", value=f"{balance} очков.")  
 
-   await ctx.respond(embed=embed)
+    await ctx.respond(embed=embed)
 
 @bot.slash_command(name="clear", description="Удалить указанное количество сообщений в канале")
 async def clear(ctx: discord.ApplicationContext, amount: int):
     
-   if not has_allowed_role(ctx):
-       await ctx.respond("У вас нет прав для выполнения этой команды.", ephemeral=True)
-       return
+    if not has_allowed_role(ctx):
+        await ctx.respond("У вас нет прав для выполнения этой команды.", ephemeral=True)
+        return
     
-   if amount < 1 or amount > 100:
-       await ctx.respond("Укажите количество от 1 до 100.", ephemeral=True)
-       return
+    if amount < 1 or amount > 100:
+        await ctx.respond("Укажите количество сообщений от 1 до 100.", ephemeral=True)
+        return
 
    # Удаляем сообщения в канале
    deleted = await ctx.channel.purge(limit=amount + 1)  
     
    await ctx.respond(f"Удалено {len(deleted)-1} сообщений.", ephemeral=True)  
-
-@bot.slash_command(name="add_role", description="Добавить роль пользователю")
-async def add_role(ctx: discord.ApplicationContext, user: discord.User, role: discord.Role):
-   if not has_allowed_role(ctx):
-       await ctx.respond("У вас нет прав для выполнения этой команды.", ephemeral=True)
-       return
-
-   if role in user.roles:
-       await ctx.respond(f"{user.mention} уже имеет эту роль.", ephemeral=True)
-       return
-
-   await user.add_roles(role)
-
-   # Обновляем словарь с ролями пользователей
-   if str(user.id) not in user_roles:
-       user_roles[str(user.id)] = []
-   
-   if role.id not in user_roles[str(user.id)]:
-       user_roles[str(user.id)].append(role.id)
-
-   save_data()  # Сохраняем данные после изменения ролей пользователя
-
-   await ctx.respond(f"Роль {role.name} успешно добавлена {user.mention}.", ephemeral=True)
-
-@bot.slash_command(name="remove_role", description="Удалить роль у пользователя")
-async def remove_role(ctx: discord.ApplicationContext, user: discord.User, role: discord.Role):
-   if not has_allowed_role(ctx):
-       await ctx.respond("У вас нет прав для выполнения этой команды.", ephemeral=True)
-       return
-
-   if role not in user.roles:
-       await ctx.respond(f"{user.mention} не имеет этой роли.", ephemeral=True)
-       return
-
-   await user.remove_roles(role)
-
-   # Обновляем словарь с ролями пользователей
-   if str(user.id) in user_roles and role.id in user_roles[str(user.id)]:
-       user_roles[str(user.id)].remove(role.id)
-
-   save_data()  # Сохраняем данные после изменения ролей пользователя
-
-   await ctx.respond(f"Роль {role.name} успешно удалена у {user.mention}.", ephemeral=True)
 
 @bot.event
 async def on_disconnect():
