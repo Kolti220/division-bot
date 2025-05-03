@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import json
 import os
+
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 
 # Устанавливаем интенты
@@ -142,11 +143,16 @@ async def clear(ctx: discord.ApplicationContext, amount: int):
     
     await ctx.respond(f"Удалено {len(deleted)-1} сообщений.", ephemeral=True)  
 
-# Сохраняем данные при завершении работы бота (необязательно в данном случае,
-# так как мы сохраняем данные после каждого изменения).
+# Сохраняем данные при завершении работы бота.
 @bot.event
 async def on_disconnect():
    save_data()
 
-bot.run('DISCORD_TOKEN')  # Замените на ваш токен бота
-
+if __name__ == "__main__":
+   if DISCORD_TOKEN is None:
+       print("Ошибка: Токен Discord не установлен.")
+   else:
+       try:
+           bot.run(DISCORD_TOKEN)  
+       except Exception as e:
+           print(f"Ошибка при запуске бота: {e}")
