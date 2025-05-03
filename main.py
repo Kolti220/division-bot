@@ -35,6 +35,9 @@ user_points = {}
 # Список ID ролей, которые могут использовать команды добавления и снятия очков и очистки сообщений
 allowed_role_ids = [1365244035807318027, 1365244014395392040, 1365243619656732736, 1366810345724969129, 1366810345724969128, 1366810345724969127]
 
+# Создаем блокировку для безопасного обновления очков
+points_lock = threading.Lock()
+
 def has_allowed_role(ctx):
     return any(role.id in allowed_role_ids for role in ctx.author.roles)
 
@@ -96,8 +99,9 @@ async def add(ctx: discord.ApplicationContext, user: discord.User, points: int, 
 
     await ctx.defer()
 
-    # Обновляем очки пользователя
-    user_points[user.id] = user_points.get(user.id, 0) + points
+    # Используем блокировку для безопасного обновления очков
+    with points_lock:
+        user_points[user.id] = user_points.get(user.id, 0) + points
     
     embed = discord.Embed(title="Отчёт о выдаче очков", color=0x00ff00)
     embed.add_field(name="Военнослужащий", value=user.mention)
@@ -124,8 +128,15 @@ async def take(ctx: discord.ApplicationContext, user: discord.User, points: int,
 
     await ctx.defer()
 
-    # Обновляем очки пользователя
-    user_points[user.id] = user_points.get(user.id, 0) - points
+    # Используем блокировку для безопасного обновления очков
+    with points_lock:
+        current_points = user_points.get(user.id, 0)
+        
+        if current_points < points:
+            await ctx.respond("Недостаточно очков для снятия.", ephemeral=True)
+            return
+        
+        user_points[user.id] = current_points - points
     
     embed = discord.Embed(title="Отчёт о снятии очков", color=0x00ff00)
     embed.add_field(name="Военнослужащий", value=user.mention)
@@ -163,10 +174,10 @@ async def clear(ctx: discord.ApplicationContext, amount: int):
         await ctx.respond("Укажите количество сообщений от 1 до 100.", ephemeral=True)
         return
 
-    # Удаляем сообщения в канале
-    deleted = await ctx.channel.purge(limit=amount + 1)  
+   # Удаляем сообщения в канале
+   deleted = await ctx.channel.purge(limit=amount + 1)  
     
-    await ctx.respond(f"Удалено {len(deleted)-1} сообщений.", ephemeral=True)  
+   await ctx.respond(f"Удалено {len(deleted)-1} сообщений.", ephemeral=True)  
 
 @bot.event
 async def on_disconnect():
