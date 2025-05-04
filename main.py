@@ -102,7 +102,8 @@ async def add(ctx: discord.ApplicationContext, user: discord.User, points: int, 
     # Используем блокировку для безопасного обновления очков
     with points_lock:
         user_points[user.id] = user_points.get(user.id, 0) + points
-    
+        save_data()  # Сохраняем данные сразу после изменения
+
     embed = discord.Embed(title="Отчёт о выдаче очков", color=0x00ff00)
     embed.add_field(name="Военнослужащий", value=user.mention)
     embed.add_field(name="Получает", value=f"{points} очков.")
@@ -113,8 +114,6 @@ async def add(ctx: discord.ApplicationContext, user: discord.User, points: int, 
         channel = bot.get_channel(channel_id)
         if channel is not None:
             await channel.send(embed=embed)
-
-    save_data()  # Сохраняем данные после изменения очков пользователя
 
     await ctx.respond("Очки успешно выданы.", ephemeral=True)
 
@@ -137,7 +136,8 @@ async def take(ctx: discord.ApplicationContext, user: discord.User, points: int,
             return
         
         user_points[user.id] = current_points - points
-    
+        save_data()  # Сохраняем данные сразу после изменения
+
     embed = discord.Embed(title="Отчёт о снятии очков", color=0x00ff00)
     embed.add_field(name="Военнослужащий", value=user.mention)
     embed.add_field(name="Лишается", value=f"{points} очков.")
@@ -148,8 +148,6 @@ async def take(ctx: discord.ApplicationContext, user: discord.User, points: int,
         channel = bot.get_channel(channel_id)
         if channel is not None:
             await channel.send(embed=embed)
-
-    save_data()  # Сохраняем данные после изменения очков пользователя
 
     await ctx.respond("Очки успешно сняты.", ephemeral=True)
 
